@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PAPERS</title>
+    <style>
+        * { box-sizing: border-box; -webkit-text-size-adjust: none; }
+        body { margin: 0; padding: 0; background: #000; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .nav { height: 44px; display: flex; background: #222; padding: 2px; gap: 2px; overflow-x: auto; }
+        .nav button { flex: none; width: 85px; border: none; background: #333; color: #aaa; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .nav button.active { background: #d32f2f; color: #fff; }
+
+        .viewport { flex: 1; overflow-y: auto; overflow-x: hidden; background: #fff; width: 1100px; margin: 0 auto; }
+        table { width: 1100px; table-layout: fixed; border-collapse: collapse; }
+        
+        .c-date { width: 100px; background: #f2f2f2; }
+        .c-open { width: 180px; background: #fff; padding: 0 2px; }
+        .c-idx  { width: 40px; background: #f2f2f2; font-weight: bold; border-left: 1px solid #999; }
+        .c-ratio-col { width: 100px; background: #fff !important; color: #000 !important; font-weight: bold; }
+        
+        th, td { 
+            border: 0.5px solid #ccc; text-align: center; 
+            height: 25px; padding: 0; 
+            font-size: 11px; line-height: 25px; white-space: nowrap; 
+        }
+
+        /* 首列標題：全黑底白字 */
+        thead th { position: sticky; top: 0; background: #000 !important; color: #fff !important; z-index: 10; height: 30px; }
+
+        /* 紅圈白字號碼 */
+        .num-ball {
+            display: inline-block; width: 18px; height: 18px; line-height: 18px;
+            background-color: #ff0000; color: #fff; border-radius: 50%;
+            font-weight: bold; font-size: 11px; margin: 0 1px; text-align: center;
+        }
+
+        /* 單：白底黑字圓圈 */
+        .ball-dan {
+            display: inline-block; width: 18px; height: 18px; line-height: 17px;
+            background-color: #fff; color: #000; border: 1px solid #000; border-radius: 50%;
+            font-weight: bold; font-size: 11px; margin: 0 1px; text-align: center;
+        }
+
+        /* 双：黑底白字圓圈 */
+        .ball-shuang {
+            display: inline-block; width: 18px; height: 18px; line-height: 18px;
+            background-color: #000; color: #fff; border-radius: 50%;
+            font-weight: bold; font-size: 11px; margin: 0 1px; text-align: center;
+        }
+
+        .dot { font-weight: bold; font-size: 16px; }
+        .red-dot { color: #ff0000; }   
+        .green-dot { color: #2e7d32; } 
+        .orange-dot { color: #ef6c00; }
+        .blue-dot { color: #1976d2; }  
+        
+        .black-square { color: #000; font-size: 14px; background: #fff; }
+        .row:nth-child(even) { background: #f9f9f9; }
+        .btn-more { width: 1100px; margin: 0 auto; padding: 15px; text-align: center; background: #444; color: #fff; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    <button onclick="setMode('trend')" id="m-trend" class="active">分區走勢</button>
+    <button onclick="setMode('tri')" id="m-tri">三分區</button>
+    <button onclick="setMode('head')" id="m-head">頭數分析</button>
+    <button onclick="setMode('tail')" id="m-tail">尾數分析</button>
+    <button onclick="setMode('oe')" id="m-oe">單双分析</button>
+    <button onclick="setMode('stat')" id="m-stat">統計表</button>
+</div>
+
+<div class="viewport">
+    <table>
+        <thead><tr id="h-tr"></tr></thead>
+        <tbody id="b-tbody"></tbody>
+    </table>
+    <div class="btn-more" onclick="loadMore()">載入更多...</div>
+</div>
+
+<script src="https://88l88.github.io/666/allData.js"></script>
+
+<script>
+    let mode = 'trend';
+    let limit = 100;
+
+    function setMode(m) {
+        mode = m;
+        document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+        document.getElementById('m-'+m).classList.add('active');
+        render();
+    }
+
+    function loadMore() { limit += 200; render(); }
+
+    function render() {
+        const head = document.getElementById('h-tr');
+        const body = document.getElementById('b-tbody');
+        let h = `<th class="c-date">日期</th><th class="c-open">開獎區</th>`;
+        
+        if (mode === 'trend' || mode === 'tri') {
+            for(let i=1; i<=39; i++) {
+                let bg = mode === 'tri' ? (i <= 13 ? "#2e7d32" : (i <= 26 ? "#ef6c00" : "#1976d2")) : "#000";
+                h += `<th style="font-size:9px; background:${bg} !important; color:#fff;">${i<10?'0'+i:i}</th>`;
+            }
+            if (mode === 'tri') h += `<th class="c-ratio-col" style="background:#000 !important; color:#fff !important;">比例</th>`;
+        } else if (mode === 'head') {
+            for(let i=0; i<=3; i++) h += `<th>${i}頭</th>`;
+        } else if (mode === 'tail') {
+            for(let i=0; i<=9; i++) h += `<th>${i}尾</th>`;
+        } else if (mode === 'oe') {
+            h += `<th style="width:180px">單双排列</th><th class="c-ratio-col" style="background:#000 !important; color:#fff !important;">比例</th>`;
+            for(let r of ['0:5','1:4','2:3','3:2','4:1','5:0']) h += `<th style="width:83px">${r}</th>`;
+        } else if (mode === 'stat') {
+            const cols = ['和值','均值','單双比','首數和','尾數和','首尾差','連號','同尾'];
+            cols.forEach(c => h += `<th>${c}</th>`);
+        }
+        h += `<th class="c-idx">#</th>`;
+        head.innerHTML = h;
+
+        let rows = "";
+        const data = all.slice(0, limit);
+        for (let i = 0; i < data.length; i++) {
+            const r = data[i];
+            const ns = [r[1], r[2], r[3], r[4], r[5]];
+            const nums = ns.map(Number).sort((a,b)=>a-b);
+            let openHtml = ns.map(num => `<span class="num-ball">${num}</span>`).join('');
+            let row = `<tr class="row"><td class="c-date">${r[0]}</td><td class="c-open">${openHtml}</td>`;
+            
+            if (mode === 'trend' || mode === 'tri') {
+                for(let n=1; n<=39; n++) {
+                    let hit = ns.indexOf(n<10?'0'+n:''+n) !== -1;
+                    let dotCls = mode === 'tri' ? (n<=13?"green-dot":(n<=26?"orange-dot":"blue-dot")) : "red-dot";
+                    row += `<td class="dot ${dotCls}">${hit?'●':''}</td>`;
+                }
+                if (mode === 'tri') {
+                    let z1=nums.filter(n=>n<=13).length, z2=nums.filter(n=>n>=14&&n<=26).length, z3=nums.filter(n=>n>=27).length;
+                    row += `<td class="c-ratio-col">${z1}:${z2}:${z3}</td>`;
+                }
+            } else if (mode === 'head') {
+                let c = [nums.filter(n=>n<=9).length, nums.filter(n=>n>=10&&n<=19).length, nums.filter(n=>n>=20&&n<=29).length, nums.filter(n=>n>=30).length];
+                c.forEach(v => row += `<td style="font-weight:bold; color:#d32f2f">${v||''}</td>`);
+            } else if (mode === 'tail') {
+                let tc = {}; nums.forEach(n => { let t=n%10; tc[t]=(tc[t]||0)+1; });
+                for(let t=0; t<=9; t++) row += `<td style="font-weight:bold; color:#d32f2f">${tc[t]||''}</td>`;
+            } else if (mode === 'oe') {
+                let o = nums.filter(x=>x%2!==0).length; let ratio = `${o}:${5-o}`;
+                // 單双球區別化樣式
+                let oeHtml = nums.map(x=>x%2!==0?`<span class="ball-dan">單</span>`:`<span class="ball-shuang">双</span>`).join('');
+                row += `<td>${oeHtml}</td><td class="c-ratio-col">${ratio}</td>`;
+                for(let rt of ['0:5','1:4','2:3','3:2','4:1','5:0']) {
+                    row += `<td class="black-square">${ratio===rt?'■':''}</td>`;
+                }
+            } else if (mode === 'stat') {
+                let sum = nums.reduce((a,b)=>a+b,0), diff = nums[4]-nums[0];
+                let serials = []; for(let k=1; k<nums.length; k++) { if(nums[k]-nums[k-1]===1) serials.push(`${nums[k-1]},${nums[k]}`); }
+                let tm = {}; nums.forEach(n => { let t=n%10; tm[t]=(tm[t]||0)+1; });
+                let tailText = Object.keys(tm).filter(k=>tm[k]>1).map(k=>`${k}尾(${tm[k]})`).join('') || '無';
+                row += `<td>${sum}</td><td>${(sum/5).toFixed(1)}</td><td>${nums.filter(x=>x%2!==0).length}:${5-nums.filter(x=>x%2!==0).length}</td><td>${nums.reduce((a,b)=>a+Math.floor(b/10),0)}</td><td>${nums.reduce((a,b)=>a+(b%10),0)}</td><td>${diff}</td><td style="font-size:10px">${serials.join('|')||'無'}</td><td style="font-size:10px">${tailText}</td>`;
+            }
+            row += `<td class="c-idx">${i+1}</td></tr>`;
+            rows += row;
+        }
+        body.innerHTML = rows;
+    }
+    window.onload = render;
+</script>
+</body>
+</html>
